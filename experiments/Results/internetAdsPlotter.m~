@@ -1,0 +1,8 @@
+mseBar = [reshape(f.bias'.^2, numel(f.bias), 1) reshape(f.variance', numel(f.bias), 1)];
+mseBarPlot = reshape([reshape(mseBar, 3, []); zeros(1, numel(mseBar) / 3)], [], 2);
+
+fare ciclo in cui si setta il colore di ogni barra
+
+si fa:
+
+h = bar(mseBarPlot, 'stacked', 'FaceColor', 'r')

@@ -1,0 +1,81 @@
+function [avg_Q] = W(n_actions, n_experiments, n_trials, gamma, exp)
+% ...
+
+avg_Q = zeros(n_experiments, n_trials);
+
+idxs = repmat(1:n_actions, n_actions, 1);
+idxs = (1 - eye(n_actions)) .* idxs';
+idxs(idxs == 0) = [];
+idxs = reshape(idxs, n_actions - 1, n_actions);
+idxs = idxs';
+
+parfor experiment = 1:n_experiments
+    Q = zeros(1, n_actions);
+    Q2 = Q;
+    weightsVar = Q;
+    n_updates = 0;
+    current_action = 1;
+	sigma = ones(size(Q)) * 1e10;
+    n_alpha = ones(n_actions);
+    
+    W = 0;
+    
+    fprintf('Experiment: %d\n', experiment);
+    
+    for i = 1:n_trials * n_actions
+        reward = computeReward(current_action);
+        
+		target = reward + gamma * W;
+        
+        alpha = 1 / n_alpha(current_action)^exp;
+
+        Q(current_action) = (1 - alpha) * Q(current_action) + alpha * target;
+        Q2(current_action) = (1 - alpha) * Q2(current_action) + alpha * target^2;
+        
+        if n_updates > 1
+            weightsVar(current_action) = (1 - alpha)^2 * weightsVar(current_action) + alpha^2;
+            n = 1 / weightsVar(current_action);
+            diff = Q2(current_action) - Q(current_action)^2;
+            diff(diff < 0) = 0;
+            sigma(current_action) = sqrt(diff / n);
+            sigma(isnan(sigma)) = 1e10;
+            sigma(sigma == 0) = 1e-4;
+        end
+        
+        n_alpha(current_action) = n_alpha(current_action) + 1;
+
+        current_action = current_action + 1;
+        if(current_action == n_actions + 1)
+            n_updates = n_updates + 1;
+           
+			means = Q;
+	        current_sigma = sigma;
+        	current_sigma(current_sigma <= 0) = 1e-4;
+
+            lower_limit = means - 8 * current_sigma;
+            upper_limit = means + 8 * current_sigma;
+            n_trapz = 1e2;
+            x = zeros(n_trapz, n_actions);
+            y = zeros(size(x));
+            for j = 1:n_actions
+                x(:, j) = linspace(lower_limit(j), upper_limit(j), n_trapz);
+                y(:, j) = normpdf(x(:, j), means(j), current_sigma(j)) .* ...
+                        prod(normcdf(repmat(x(:, j), 1, n_actions - 1), ...
+                                     means(repmat(idxs(j, :), n_trapz, 1)), ...
+                                     current_sigma(repmat(idxs(j, :), n_trapz, 1))), 2);
+            end
+            integrals = trapz(y, 1) .* ((upper_limit - lower_limit) / (n_trapz - 1));
+
+            W = integrals * Q(:);
+
+            current_action = 1;
+            avg_Q(experiment, n_updates) = mean(Q(:));
+            
+            if(mod(n_updates, 10) == 0)
+                fprintf('Trial: %d\n', n_updates);
+            end         
+        end
+    end
+end
+
+end

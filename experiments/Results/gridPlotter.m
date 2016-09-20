@@ -1,0 +1,37 @@
+subplot(2,1,1)
+hold
+
+a = ones(1, 100) * 0.01;
+
+plot(conv(mean(f1.r1),a,'valid'), 'b')
+plot(conv(mean(f1.r2),a,'valid'), 'r')
+plot(conv(mean(f1.r3),a,'valid'), 'g')
+plot(conv(mean(f2.r3),a,'valid'), 'c')
+
+xlabel('Number of Steps')
+ylabel('Mean reward per step')
+axis([0 10000 -1 0.6])
+legend('Q-Learning', 'Double Q-Learning', 'WG Q-Learning', 'WG Q-Learning with WG policy', 'Location', 'southeast')
+
+x = [0 10000];
+y = [0.2 0.2];
+plot(x, y, '--')
+
+subplot(2,1,2)
+hold
+
+plot(mean(f1.max_Q1), 'b')
+plot(mean(f1.max_Q2), 'r')
+plot(mean(f1.max_Q3), 'g')
+plot(mean(f2.max_Q3), 'c')
+
+x = [0 10000];
+y = [0.36 0.36];
+plot(x, y, '--')
+
+xlabel('Number of Steps')
+ylabel('max Q(S, a)')
+axis([0 10000 -8 8])
+legend('Q-Learning', 'Double Q-Learning', 'WG Q-Learning', 'WG Q-Learning with WG policy')
+
+imsave('img.eps')
