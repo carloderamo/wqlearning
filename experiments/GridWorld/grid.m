@@ -2,7 +2,7 @@ clear all;
 
 gamma = 0.95;
 exp = input('Exp: ');
-n_experiments = 1;
+n_experiments = 10000;
 n_actions = 4;
 n_steps = 10000;
 noiseSigma = 5;
