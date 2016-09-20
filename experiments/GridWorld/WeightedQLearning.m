@@ -1,5 +1,5 @@
-function [max_Q, r] = W(n_states, n_actions, n_experiments, start, goal, n_cols, n_steps, gamma, exp, reward_array, policy)
-% ...
+function [max_Q, r] = WeightedQLearning(n_states, n_actions, n_experiments, start, goal, n_cols, n_steps, gamma, exp, reward_array, policy)
+% Weighted Q-Learning
 
 max_Q = zeros(n_experiments, n_steps);
 r = zeros(n_experiments, n_steps);
@@ -18,7 +18,7 @@ for experiment = 1:n_experiments
     n_alpha = zeros(n_states, n_actions);
     n_eps = zeros(n_states);
     sigma = ones(size(Q)) * 1e10;
-    integrals = ones(1, n_actions) * (1 / n_actions);
+    probs = ones(1, n_actions) * (1 / n_actions);
 	n_updates = zeros(n_states, n_actions);
     
     fprintf('Experiment: %d\n', experiment);
@@ -26,7 +26,7 @@ for experiment = 1:n_experiments
     for i = 1:n_steps
         n_eps(current_state) = n_eps(current_state) + 1;
         
-        [action, reward, next_state] = step(current_state, Q, n_states, n_cols, n_eps, start, goal, experiment, i, reward_array, policy, integrals);
+        [action, reward, next_state] = step(current_state, Q, n_states, n_cols, n_eps, start, goal, experiment, i, reward_array, policy, probs);
 
         means = Q(next_state, :);
 
@@ -46,11 +46,11 @@ for experiment = 1:n_experiments
 %                                 means(repmat(idxs(j, :), n_trapz, 1)), ...
 %                                 current_sigma(repmat(idxs(j, :), n_trapz, 1))), 2);
 %         end
-%         integrals = trapz(y, 1) .* ((upper_limit - lower_limit) / (n_trapz - 1));
+%         probs = trapz(y, 1) .* ((upper_limit - lower_limit) / (n_trapz - 1));
 %         
 %         fprintf('\nIntegral: ');
-%         sum(integrals)
-%         W = integrals * Q(next_state, :)';
+%         sum(probs)
+%         W = probs * Q(next_state, :)';
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%% SAMPLING PROBS %%%%%%
@@ -63,8 +63,6 @@ for experiment = 1:n_experiments
         occCount(val(occ > 0)) = occ(occ > 0);
         probs = occCount / n_samples;
 
-        fprintf('Samples: ');
-        sum(probs)
         W = probs * Q(next_state, :)';
         %%%%%%%%%%%%%%%%%%%%%%%%%%%
         
