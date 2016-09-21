@@ -1,4 +1,4 @@
-function [action, reward, next_state] = step(current_state, Q, n_states, n_cols, n_eps, start, goal, experiment_n, step_n, reward_array, policy, integrals)
+function [action, reward, next_state] = step(current_state, Q, n_states, n_cols, n_eps, start, goal, experiment_n, step_n, reward_array, policy, probs)
 % Grid world step
 
 if strcmp(policy, 'eps')
@@ -10,7 +10,7 @@ if strcmp(policy, 'eps')
         action = floor(rand * 4) + 1;
     end
 elseif strcmp(policy, 'neps')
-    cums = cumsum(integrals);
+    cums = cumsum(probs);
     probs = cums / max(cums);
     action = find(rand <= probs, 1, 'first');
 end
