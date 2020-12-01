@@ -15,7 +15,7 @@ n_experiments = 2000;
 n_actions = 30;
 n_visitors = 3e5;
 n_trials = n_visitors / n_actions;
-error = zeros(n_experiments, 3);
+error = zeros(n_experiments, 4);
 
 idxs = repmat(1:n_actions, n_actions, 1);
 idxs = (1 - eye(n_actions)) .* idxs';
@@ -50,21 +50,37 @@ for experiment = 1:n_experiments
     mu2 = mean(pHat1(doubleAdMax));
     error(experiment, 2) = mean([mu1 mu2]) - max(p);
     
-    % W Estimator
-    lower_limit = means - 8 * sigma;
-    upper_limit = means + 8 * sigma;
-    n_trapz = 1e2;
-    x = zeros(n_trapz, n_actions);
-    y = zeros(size(x));
-    for j = 1:n_actions
-        x(:, j) = linspace(lower_limit(j), upper_limit(j), n_trapz);
-        y(:, j) = normpdf(x(:, j), means(j), sigma(j)) .* ...
-                prod(normcdf(repmat(x(:, j), 1, n_actions - 1), ...
-                             means(repmat(idxs(j, :), n_trapz, 1)), ...
-                             sigma(repmat(idxs(j, :), n_trapz, 1))), 2);
-    end
-    integrals = trapz(y, 1) .* ((upper_limit - lower_limit) / (n_trapz - 1));
-    error(experiment, 3) = integrals * means' - max(p);
+    % Maxmin Estimator
+    clicks1 = clicks(1:n_trials / 2, :);
+    clicks2 = clicks(n_trials / 2 + 1:end, :);
+    pHat1 = sum(clicks1) / (n_trials / 2);
+    pHat2 = sum(clicks2) / (n_trials / 2);
+    pmin = min(pHat1, pHat2);
+    error(experiment, 3) = max(pmin) - max(p);
+    
+%         % W Estimator
+%         lower_limit = means - 8 * sigma;
+%         upper_limit = means + 8 * sigma;
+%         n_trapz = 2e2;
+%         x = zeros(n_trapz, n_actions);
+%         y = zeros(size(x));
+%         for j = 1:n_actions
+%             x(:, j) = linspace(lower_limit(j), upper_limit(j), n_trapz);
+%             y(:, j) = normpdf(x(:, j), means(j), sigma(j)) .* ...
+%                     prod(normcdf(repmat(x(:, j), 1, n_actions - 1), ...
+%                                  means(repmat(idxs(j, :), n_trapz, 1)), ...
+%                                  sigma(repmat(idxs(j, :), n_trapz, 1))), 2);
+%         end
+%         integrals = trapz(y, 1) .* ((upper_limit - lower_limit) / (n_trapz - 1));
+%         error(experiment, 4, i) = integrals * means' - max(p);
+        n_samples = 1000;
+        samples = repmat(means, n_samples, 1) + repmat(sigma, n_samples, 1) .* randn(n_samples, n_actions(i));
+        [~, max_idxs] = max(samples');
+        max_count = zeros(size(samples));
+        max_count(sub2ind(size(samples), 1:length(max_idxs'), max_idxs)) = 1;
+
+        probs = sum(max_count, 1) / n_samples;
+        error(experiment, 4, i) = probs * means' - max(p);
 end
 
 bias = mean(error);

@@ -11,7 +11,7 @@
 
 clear all;
 
-n_experiments = 2000;
+n_experiments = 5000;
 n_actions = 30;
 n_visitors = 3e5;
 n_trials = n_visitors / n_actions;
@@ -24,22 +24,26 @@ idxs = idxs';
 
 max_p = 0.02:0.01:0.1;
 
-error = zeros(n_experiments, 3, length(max_p));
-bias = zeros(length(max_p), 3);
-variance = zeros(length(max_p), 3);
-mse = zeros(length(max_p), 3);
+error = zeros(n_experiments, 4, length(max_p));
+bias = zeros(length(max_p), 4);
+variance = zeros(length(max_p), 4);
+mse = zeros(length(max_p), 4);
 
 for i = 1:length(max_p)
-    for experiment = 1:n_experiments
+    errorME = zeros(n_experiments, 1);
+    errorDE = zeros(n_experiments, 1);
+    errorMME = zeros(n_experiments, 1);
+    errorWE = zeros(n_experiments, 1);
+    parfor experiment = 1:n_experiments
 
-        fprintf('Experiment: %d\n', experiment);
+        fprintf('N. setting: %d, Experiment: %d\n', i, experiment);
 
-	p = 0.02 + (max_p(i) - 0.02) * rand(1, n_actions);
+	    p = 0.02 + (max_p(i) - 0.02) * rand(1, n_actions);
 
         [clicks, means, sigma] = crtLearning(n_actions, n_trials, p);
 
         % Maximum Estimator
-        error(experiment, 1, i) = max(sum(clicks) / n_trials) - max(p);
+        errorME(experiment, 1) = max(sum(clicks) / n_trials) - max(p);
 
         % Double Estimator
         clicks1 = clicks(1:n_trials / 2, :);
@@ -51,12 +55,20 @@ for i = 1:length(max_p)
 
         doubleAdMax = find(pHat2 == max(pHat2));
         mu2 = mean(pHat1(doubleAdMax));
-        error(experiment, 2, i) = mean([mu1 mu2]) - max(p);
+        errorDE(experiment, 1) = mean([mu1 mu2]) - max(p);
+        
+         % Maxmin Estimator
+        clicks1 = clicks(1:n_trials / 2, :);
+        clicks2 = clicks(n_trials / 2 + 1:end, :);
+        mu1 = sum(clicks1) / (n_trials / 2);
+        mu2 = sum(clicks2) / (n_trials / 2);
+        mumin = min(mu1, mu2);
+        errorMME(experiment, 1) = max(mumin) - max(p);
 
         % W Estimator
         lower_limit = means - 8 * sigma;
         upper_limit = means + 8 * sigma;
-        n_trapz = 1e2;
+        n_trapz = 3e2;
         x = zeros(n_trapz, n_actions);
         y = zeros(size(x));
         for j = 1:n_actions
@@ -67,11 +79,11 @@ for i = 1:length(max_p)
                                  sigma(repmat(idxs(j, :), n_trapz, 1))), 2);
         end
         integrals = trapz(y, 1) .* ((upper_limit - lower_limit) / (n_trapz - 1));
-        error(experiment, 3, i) = integrals * means' - max(p);
+        errorWE(experiment, 1) = integrals * means' - max(p);
     end
-    
-    bias(i, :) = mean(error(:, :, i));
-    variance(i, :) = var(error(:, :, i));
+    error = cat(2, errorME, errorDE, errorMME, errorWE);
+    bias(i, :) = mean(error);
+    variance(i, :) = var(error);
     mse(i, :) = bias(i, :).^2 + variance(i, :);
 end
 
